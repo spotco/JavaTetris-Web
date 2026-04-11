@@ -60,6 +60,17 @@ class TetrisMain extends Phaser.Scene {
         gfx.lineStyle(1, 0x444444, 1);
         gfx.lineBetween(FIELD_LEFT, HUD_Y - 8, FIELD_LEFT + FIELD_W, HUD_Y - 8);
 
+        // ── Trip mode color cycling ───────────────────────────────────────────
+        // block0.gif has 5 frames at 100ms each: yellow→red→blue→green→purple
+        // We replicate this by tinting block0.png with a timer-driven color index
+        this.tripColors = [0xffc90e, 0xed1c24, 0x00a2e8, 0x22b14c, 0xa349a4];
+        this.tripColorIndex = 0;
+        this.time.addEvent({
+            delay: 100,
+            callback: () => { this.tripColorIndex = (this.tripColorIndex + 1) % this.tripColors.length; },
+            loop: true
+        });
+
         // ── Title screen objects ──────────────────────────────────────────────
         // mirrors: JLabel titlescreen + highscore1
         // Java setBounds(0,-25,255,420) → centered in new canvas
@@ -183,11 +194,12 @@ class TetrisMain extends Phaser.Scene {
         this.changenext(this.nextsto);
 
         // mirrors: int counter=0; fallspd=20; speedup=0; points=0;
-        this.counter  = 0;
-        this.fallspd  = 20;
-        this.speedup  = 0;
-        this.points   = 0;
+        this.counter   = 0;
+        this.fallspd   = 20;
+        this.speedup   = 0;
+        this.points    = 0;
         this.tickAccum = 0;
+        this.lockDelay = 0; // ticks elapsed since piece started resting (lock grace period)
 
         // mirrors: AudioPlayer.player.start(asd) + 62400ms restart timer
         this.mainMusic.play();
@@ -244,16 +256,29 @@ class TetrisMain extends Phaser.Scene {
     // mirrors: the body of while(true) { // game loop } in TetrisMain.main()
     gameTick() {
         if (this.game.player.hitcheck(this.game.grid)) { // player piece hit static
-            this.game.convertplayerstatic();
-            if (this.game.player.generateNew(this.game.grid, this.nextsto)) {
-                // game over — mirrors the break out of the game loop
-                this.game.viewPlayer();
-                this.display(this.game.output());
-                this.enterGameOver();
-                return;
+            // Lock delay: give the player grace ticks to rotate/move before locking.
+            // Threshold scales with speed so faster play = less grace time.
+            const lockThreshold = Math.max(Math.floor(this.fallspd / 2), 4);
+            this.lockDelay++;
+            this.game.player.event(this.game.grid); // still accept input during grace period
+            // If input moved the piece off the surface, cancel the lock delay
+            if (!this.game.player.hitcheck(this.game.grid)) {
+                this.lockDelay = 0;
+            } else if (this.lockDelay >= lockThreshold) {
+                // Grace period expired — lock the piece (mirrors original Java behaviour)
+                this.lockDelay = 0;
+                this.game.convertplayerstatic();
+                if (this.game.player.generateNew(this.game.grid, this.nextsto)) {
+                    // game over — mirrors the break out of the game loop
+                    this.game.viewPlayer();
+                    this.display(this.game.output());
+                    this.enterGameOver();
+                    return;
+                }
+                this.nextsto = Phaser.Math.Between(1, notypes);
             }
-            this.nextsto = Phaser.Math.Between(1, notypes);
         } else {
+            this.lockDelay = 0; // piece is airborne — reset grace counter
             if (this.counter >= this.fallspd) { // change this variable based on game speed
                 this.game.player.fall();
                 this.counter = 0;
@@ -299,9 +324,9 @@ class TetrisMain extends Phaser.Scene {
 
     // mirrors: TitleListener.keyPressed — Z (keyCode 90) → trip = true
     onZ() {
-        this.trip = true;
+        this.trip = !this.trip;
         if (this.state === 'TITLE') {
-            this.titlescreen.setTexture('title0');
+            this.titlescreen.setTexture(this.trip ? 'title0' : 'title');
         }
     }
 
@@ -338,9 +363,10 @@ class TetrisMain extends Phaser.Scene {
                 if (sto.substring(x, x+1) === '1' || sto.substring(x, x+1) === '9') {
                     let spr = this.dispblocks[y * gridx + x];
                     spr.setVisible(true);
-                    // trip mode: Java uses block0.gif (animated); here we use a magenta tint
+                    // trip mode: block0.gif cycled yellow→red→blue→green→purple at 100ms/frame
+                    // replicated here by tinting block0.png with the current tripColors index
                     if (this.trip) {
-                        spr.setTint(0xff00ff);
+                        spr.setTint(this.tripColors[this.tripColorIndex]);
                     } else {
                         spr.clearTint();
                     }
