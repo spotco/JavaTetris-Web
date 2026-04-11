@@ -115,6 +115,22 @@ http://localhost:8000
 
 ---
 
+## Development workflow and planning
+
+Always start by reading PLAN.md to understand the current phase, priorities, and remaining work.
+For any non-trivial task or feature:
+
+- Read the relevant section in PLAN.md.
+- Create a clear, numbered plan before writing code.
+- Work on one task at a time.
+- After finishing a task (or at the end of a session), update PLAN.md:
+- Mark completed items with [x]
+- Move or adjust remaining TODOs as needed
+- Update "Current Phase" and "Next Milestone"
+
+
+Use checkbox format [ ] / [x] in PLAN.md for easy tracking.
+
 ## When Making Changes
 
 - Always reference the corresponding original Java file for logic fidelity
