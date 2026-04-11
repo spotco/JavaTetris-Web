@@ -11,6 +11,16 @@ const gridx   = 11;
 const gridy   = 19;
 const notypes = 7;
 
+// Layout constants (not in Java — needed to center field and push HUD below it)
+// Field pixel dimensions: W = 10*19+18 = 208,  H = 18*19+18 = 360
+const FIELD_W    = 208;
+const FIELD_H    = 360;
+const CANVAS_W   = 260;
+const CANVAS_H   = 430;
+const FIELD_LEFT = (CANVAS_W - FIELD_W) / 2;  // = 26  (symmetric margins)
+const FIELD_TOP  = 10;
+const HUD_Y      = FIELD_TOP + FIELD_H + 20;  // = 390  (20px gap below field)
+
 // ─── TetrisMain (mirrors TetrisMain.main) ─────────────────────────────────────
 
 class TetrisMain extends Phaser.Scene {
@@ -39,54 +49,66 @@ class TetrisMain extends Phaser.Scene {
         this.highscore = 0;
         this.trip      = false;  // toggled by Z key — mirrors TitleListener.trip
 
+        // ── Field border — makes game area visually distinct from the page ────
+        // (not in Java — Java used JFrame background color; here we add a border)
+        let gfx = this.add.graphics();
+        gfx.fillStyle(0x0a0a1a, 1);
+        gfx.fillRect(FIELD_LEFT, FIELD_TOP, FIELD_W, FIELD_H);
+        gfx.lineStyle(1, 0xffff00, 1);
+        gfx.strokeRect(FIELD_LEFT - 1, FIELD_TOP - 1, FIELD_W + 2, FIELD_H + 2);
+        // separator line above HUD
+        gfx.lineStyle(1, 0x444444, 1);
+        gfx.lineBetween(FIELD_LEFT, HUD_Y - 8, FIELD_LEFT + FIELD_W, HUD_Y - 8);
+
         // ── Title screen objects ──────────────────────────────────────────────
         // mirrors: JLabel titlescreen + highscore1
-        // Java setBounds(0,-25,255,420) → center at (127, 185), size 255×420
-        this.titlescreen = this.add.image(127, 185, 'title')
-            .setDisplaySize(255, 420)
+        // Java setBounds(0,-25,255,420) → centered in new canvas
+        this.titlescreen = this.add.image(CANVAS_W / 2, CANVAS_H / 2, 'title')
+            .setDisplaySize(CANVAS_W, CANVAS_H)
             .setOrigin(0.5, 0.5)
             .setVisible(false);
 
-        // mirrors: highscore1.setBounds(123, 47, 225, 50)
-        this.highscoredisp = this.add.text(123, 47, '0', {
+        // mirrors: highscore1.setBounds(123, 47 ...) — shifted right with new field offset
+        this.highscoredisp = this.add.text(FIELD_LEFT + 112, 47, '0', {
             fontFamily: 'Consolas', fontStyle: 'italic', fontSize: '10px', color: '#ffff00'
         }).setOrigin(0, 0).setVisible(false);
 
-        // ── In-game HUD objects ───────────────────────────────────────────────
-        // mirrors: staticdisp.setBounds(11, 355 ...)
-        this.staticdisp = this.add.text(11, 355, 'SCORE:      SPEED:      NEXT:', {
+        // ── In-game HUD objects — all repositioned to HUD_Y (below field) ─────
+        // mirrors: staticdisp.setBounds(11, 355 ...) — y was inside the field; now below it
+        this.staticdisp = this.add.text(FIELD_LEFT, HUD_Y, 'SCORE:      SPEED:      NEXT:', {
             fontFamily: 'Consolas', fontStyle: 'italic', fontSize: '10px', color: '#ffff00'
         }).setOrigin(0, 0).setVisible(false);
 
-        // mirrors: pointdisp.setBounds(55, 355 ...)
-        this.pointdisp = this.add.text(55, 355, '0', {
+        // mirrors: pointdisp.setBounds(55, 355 ...) — offset 44px from field left
+        this.pointdisp = this.add.text(FIELD_LEFT + 44, HUD_Y, '0', {
             fontFamily: 'Consolas', fontStyle: 'italic', fontSize: '10px', color: '#ffff00'
         }).setOrigin(0, 0).setVisible(false);
 
-        // mirrors: spddisp.setBounds(130, 355 ...)
-        this.spddisp = this.add.text(130, 355, '1', {
+        // mirrors: spddisp.setBounds(130, 355 ...) — offset 119px from field left
+        this.spddisp = this.add.text(FIELD_LEFT + 119, HUD_Y, '1', {
             fontFamily: 'Consolas', fontStyle: 'italic', fontSize: '10px', color: '#ffff00'
         }).setOrigin(0, 0).setVisible(false);
 
-        // mirrors: nxtdisp.setBounds(195, 365, 30, 30)  → center at (210, 380)
-        this.nxtdisp = this.add.image(210, 380, 'piece1')
-            .setDisplaySize(30, 30)
-            .setOrigin(0.5, 0.5)
+        // mirrors: nxtdisp.setBounds(195, 365, 30, 30) — right side of HUD row
+        this.nxtdisp = this.add.image(FIELD_LEFT + 190, HUD_Y + 8, 'piece1')
+            .setDisplaySize(24, 24)
+            .setOrigin(0, 0.5)
             .setVisible(false);
 
         // ── Game-over overlay ─────────────────────────────────────────────────
-        // mirrors: gameoverdisp.setBounds(65, 355 ...)
-        this.gameoverdisp = this.add.text(65, 355, 'GAME OVER (SPACE)', {
+        // mirrors: gameoverdisp.setBounds(65, 355 ...) — centered in field, below it
+        this.gameoverdisp = this.add.text(FIELD_LEFT + 20, HUD_Y, 'GAME OVER (SPACE)', {
             fontFamily: 'Consolas', fontStyle: 'italic', fontSize: '10px', color: '#ffff00'
         }).setOrigin(0, 0).setVisible(false);
 
         // ── Block sprite pool (mirrors ArrayList<JLabel> dispblock) ───────────
         // Pre-allocate gridx*gridy sprites; display() shows/hides each frame
-        // mirrors: dispblock.setBounds(5+(x*19), 5+(y*19), 18, 18)
+        // Java: dispblock.setBounds(5+(x*19), 5+(y*19), 18, 18)
+        // Now: origin offset by FIELD_LEFT / FIELD_TOP instead of hardcoded 5
         this.dispblocks = [];
         for (let y = 0; y < gridy; y++) {
             for (let x = 0; x < gridx; x++) {
-                let spr = this.add.image(5 + x*19, 5 + y*19, 'block0')
+                let spr = this.add.image(FIELD_LEFT + x*19, FIELD_TOP + y*19, 'block0')
                     .setOrigin(0, 0)
                     .setDisplaySize(18, 18)
                     .setVisible(false);
@@ -351,10 +373,11 @@ class TetrisMain extends Phaser.Scene {
 
 // ─── Entry point (mirrors TetrisMain.main) ────────────────────────────────────
 // Java: new JFrame("javaTetris"); frame.setSize(225, 420); background = BLACK
+// Canvas enlarged to 260×430 so HUD fits cleanly below the 360px-tall field
 new Phaser.Game({
     type:            Phaser.AUTO,
-    width:           225,
-    height:          420,
+    width:           CANVAS_W,
+    height:          CANVAS_H,
     backgroundColor: '#000000',
     scene:           TetrisMain,
     scale: {
