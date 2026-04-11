@@ -31,8 +31,14 @@ class TetrisMain extends Phaser.Scene {
 
     // mirrors: loading ImageIcon / AudioStream resources
     preload() {
-        this.load.image('title',   'img/title.gif');
-        this.load.image('title0',  'img/title0.gif');
+        // title.gif frames: 2 frames 500ms — SPACE START text blinks on/off
+        this.load.image('title_f0', 'img/title_f0.png');
+        this.load.image('title_f1', 'img/title_f1.png');
+        // title0.gif frames: 4 frames 200ms — trip mode color cycling
+        this.load.image('title0_f0', 'img/title0_f0.png');
+        this.load.image('title0_f1', 'img/title0_f1.png');
+        this.load.image('title0_f2', 'img/title0_f2.png');
+        this.load.image('title0_f3', 'img/title0_f3.png');
         this.load.image('block0',  'img/block0.png');
         for (let i = 1; i <= notypes; i++) {
             this.load.image('piece' + i, 'img/' + i + '.png');
@@ -74,10 +80,11 @@ class TetrisMain extends Phaser.Scene {
         // ── Title screen objects ──────────────────────────────────────────────
         // mirrors: JLabel titlescreen + highscore1
         // Java setBounds(0,-25,255,420) → centered in new canvas
-        this.titlescreen = this.add.image(CANVAS_W / 2, CANVAS_H / 2, 'title')
+        this.titlescreen = this.add.image(CANVAS_W / 2, CANVAS_H / 2, 'title_f0')
             .setDisplaySize(CANVAS_W, CANVAS_H)
             .setOrigin(0.5, 0.5)
             .setVisible(false);
+        this.titleAnimTimer = null;
 
         // mirrors: highscore1.setBounds(123, 47 ...) — shifted right with new field offset
         this.highscoredisp = this.add.text(FIELD_LEFT + 112, 47, '0', {
@@ -153,13 +160,15 @@ class TetrisMain extends Phaser.Scene {
         this.state = 'TITLE';
 
         this.highscoredisp.setText('' + this.highscore).setVisible(true);
-        this.titlescreen.setTexture('title').setVisible(true);
+        this.titlescreen.setVisible(true);
         this.staticdisp.setVisible(false);
         this.pointdisp.setVisible(false);
         this.spddisp.setVisible(false);
         this.nxtdisp.setVisible(false);
         this.gameoverdisp.setVisible(false);
         this.clearDisplayBlocks();
+
+        this.startTitleAnim();
 
         // mirrors: AudioPlayer.player.start(as) + 28100ms restart timer
         this.titleMusic.play();
@@ -170,10 +179,40 @@ class TetrisMain extends Phaser.Scene {
         });
     }
 
+    // Drives the title screen GIF animation via texture swapping.
+    // Normal: title.gif — 2 frames 500ms, SPACE START text blinks on/off
+    // Trip:  title0.gif — 4 frames 200ms, full color cycling
+    startTitleAnim() {
+        if (this.titleAnimTimer) this.titleAnimTimer.destroy();
+        let frame = 0;
+        if (this.trip) {
+            this.titlescreen.setTexture('title0_f0');
+            this.titleAnimTimer = this.time.addEvent({
+                delay: 200,
+                callback: () => {
+                    frame = (frame + 1) % 4;
+                    this.titlescreen.setTexture('title0_f' + frame);
+                },
+                loop: true
+            });
+        } else {
+            this.titlescreen.setTexture('title_f0');
+            this.titleAnimTimer = this.time.addEvent({
+                delay: 500,
+                callback: () => {
+                    frame = (frame + 1) % 2;
+                    this.titlescreen.setTexture('title_f' + frame);
+                },
+                loop: true
+            });
+        }
+    }
+
     // mirrors: beginning of game loop after title screen dismissed
     enterGame() {
         this.state = 'GAME';
 
+        if (this.titleAnimTimer) { this.titleAnimTimer.destroy(); this.titleAnimTimer = null; }
         if (this.titleMusicTimer) this.titleMusicTimer.destroy();
         this.titleMusic.stop();
 
@@ -326,7 +365,7 @@ class TetrisMain extends Phaser.Scene {
     onZ() {
         this.trip = !this.trip;
         if (this.state === 'TITLE') {
-            this.titlescreen.setTexture(this.trip ? 'title0' : 'title');
+            this.startTitleAnim();
         }
     }
 
