@@ -24,6 +24,8 @@ export class GameManager {
             this.player.actionRotate();
         } else if (key === 'DOWN') {
             this.player.actionDown();
+        } else if (key === 'ROTATE_CCW') {
+            this.player.rotateCCW(this.grid);
         }
     }
 

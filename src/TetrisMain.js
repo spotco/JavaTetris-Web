@@ -149,6 +149,8 @@ class TetrisMain extends Phaser.Scene {
         this.input.keyboard.on('keydown-UP',    () => this.onUp());
         this.input.keyboard.on('keydown-DOWN',  () => this.onDown());
 
+        this.setupPointerInput();
+
         this.tickAccum = 0;
         this.state     = 'TITLE';
 
@@ -380,6 +382,129 @@ class TetrisMain extends Phaser.Scene {
 
     // mirrors: KeyListener.keyPressed — arrow key 40 (DOWN)
     onDown()  { if (this.state === 'GAME') this.game.getPlayerInput('DOWN');  }
+
+    // ─── Pointer input (mouse + touch) ────────────────────────────────────────
+    // Desktop:  left-click = rotate (left half CCW / right half CW)
+    //           right-click = CW,   hold = soft drop
+    // Mobile:   drag over field = move left/right (ratchet: one cell per 19px)
+    //           tap left strip  (x < field) = move left  (instant, on pointerdown)
+    //           tap right strip (x > field) = move right (instant, on pointerdown)
+    //           tap left half of field = rotate CCW
+    //           tap right half of field = rotate CW
+    //           hold = soft drop,  swipe down = one soft-drop step
+    setupPointerInput() {
+        this.input.mouse.disableContextMenu();
+
+        const CELL_W     = 19;  // one grid cell — ratchet step for horizontal drag
+        const TAP_THRESH = 12;  // max px total movement to count as a clean tap
+        const HOLD_MS    = 220; // ms before hold activates soft drop
+        const DROP_MS    = 80;  // ms between soft-drop steps while held
+
+        let startX, startY;
+        let ratchetX, ratchetY; // ratchet baselines; advance as moves fire
+        let didMove      = false;
+        let holdInitTimer = null;
+        let holdDropTimer = null;
+
+        const cancelHold = () => {
+            if (holdInitTimer) { holdInitTimer.destroy(); holdInitTimer = null; }
+            if (holdDropTimer) { holdDropTimer.destroy(); holdDropTimer = null; }
+        };
+
+        this.input.on('pointerdown', (ptr) => {
+            // Right-click → CCW rotate immediately (desktop)
+            if (ptr.rightButtonDown()) {
+                if (this.state === 'GAME') this.game.getPlayerInput('ROTATE_CCW');
+                return;
+            }
+
+            startX   = ptr.x;
+            startY   = ptr.y;
+            ratchetX = ptr.x;
+            ratchetY = ptr.y;
+            didMove  = false;
+
+            if (this.state === 'GAME') {
+                // Strips outside the field: instant single-cell move on pointerdown
+                if (ptr.x < FIELD_LEFT) {
+                    this.game.getPlayerInput('LEFT');
+                    startX = undefined; // consume — no further action on pointerup
+                    return;
+                }
+                if (ptr.x > FIELD_LEFT + FIELD_W) {
+                    this.game.getPlayerInput('RIGHT');
+                    startX = undefined;
+                    return;
+                }
+
+                // Inside field: start hold timer for soft drop
+                holdInitTimer = this.time.addEvent({
+                    delay: HOLD_MS,
+                    callback: () => {
+                        holdInitTimer = null;
+                        if (!didMove && this.state === 'GAME') {
+                            this.game.getPlayerInput('DOWN');
+                            holdDropTimer = this.time.addEvent({
+                                delay: DROP_MS,
+                                callback: () => { if (this.state === 'GAME') this.game.getPlayerInput('DOWN'); },
+                                loop: true
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        this.input.on('pointermove', (ptr) => {
+            if (!ptr.isDown || startX === undefined || this.state !== 'GAME') return;
+
+            // Ratchet: fire one LEFT/RIGHT per CELL_W pixels of horizontal drag
+            const dx = ptr.x - ratchetX;
+            if (Math.abs(dx) >= CELL_W) {
+                const steps = Math.floor(Math.abs(dx) / CELL_W);
+                const dir   = dx > 0 ? 'RIGHT' : 'LEFT';
+                for (let i = 0; i < steps; i++) this.game.getPlayerInput(dir);
+                ratchetX += Math.sign(dx) * steps * CELL_W;
+                didMove = true;
+                cancelHold();
+            }
+
+            // Ratchet: fire one DOWN per CELL_W pixels of downward drag (fast drop)
+            const dy = ptr.y - ratchetY;
+            if (dy >= CELL_W) {
+                const steps = Math.floor(dy / CELL_W);
+                for (let i = 0; i < steps; i++) this.game.getPlayerInput('DOWN');
+                ratchetY += steps * CELL_W;
+                didMove = true;
+                cancelHold();
+            }
+        });
+
+        this.input.on('pointerup', (ptr) => {
+            cancelHold();
+            if (startX === undefined) return;
+
+            const dx = ptr.x - startX;
+            const dy = ptr.y - startY;
+
+            // Title / game-over: any tap starts / restarts
+            if (this.state === 'TITLE' || this.state === 'GAMEOVER') {
+                this.onSpace();
+                startX = undefined;
+                return;
+            }
+
+            if (this.state !== 'GAME') { startX = undefined; return; }
+
+            if (!didMove && Math.abs(dx) < TAP_THRESH && Math.abs(dy) < TAP_THRESH) {
+                // Left-click tap → CW rotate
+                this.game.getPlayerInput('ROTATE');
+            }
+
+
+            startX = undefined;
+        });
+    }
 
     // ─── Display helpers ───────────────────────────────────────────────────────
 

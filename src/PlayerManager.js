@@ -188,6 +188,27 @@ export class PlayerManager {
         this.leftqueue   = false;
     }
 
+    // Counter-clockwise rotation = 3 clockwise rotations applied atomically.
+    // Saves all coordinates+status; restores if any step is blocked.
+    rotateCCW(grid) {
+        const s = {
+            ax: this.ax, ay: this.ay, bx: this.bx, by: this.by,
+            cx: this.cx, cy: this.cy, dx: this.dx, dy: this.dy,
+            status: this.status
+        };
+        for (let i = 0; i < 3; i++) {
+            const prevStatus = this.status;
+            this.rotateevent(grid);
+            if (this.status === prevStatus) {
+                // Blocked or piece has no rotation — restore original state
+                this.ax = s.ax; this.ay = s.ay; this.bx = s.bx; this.by = s.by;
+                this.cx = s.cx; this.cy = s.cy; this.dx = s.dx; this.dy = s.dy;
+                this.status = s.status;
+                return;
+            }
+        }
+    }
+
     rotateevent(grid) {
         // status 0,1,2,3
         if (this.status === 0) {
