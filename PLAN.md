@@ -9,12 +9,9 @@
 - [x] Title screen and game-over screens
 - [x] Secret "trip" mode (Z key + magenta tint)
 - [x] Mouse control and touchscreen support
-
-## In Progress
+- [x] Update displayed controls to reflect mouse and mobile/touch controls
 
 ## Remaining TODOs
-- [ ] Fix Left click / Right click doing the same rotation  
-- [ ] Update displayed controls to also reflect mouse and mobile/touch controls
 
 ---
 

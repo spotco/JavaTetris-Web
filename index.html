@@ -14,18 +14,50 @@
       touch-action: none;  /* prevent browser scroll/zoom on canvas touch */
       user-select: none;
       -webkit-user-select: none;
+      position: relative;
+      z-index: 60;  /* above controls panel (z-index: 50) */
     }
   </style>
 </head>
 <body>
-  <!-- GitHub link and last commit date shown in bottom-right corner -->
-  <div style="position:fixed;bottom:24px;right:12px;z-index:100;">
+  <!-- Controls legend — fixed to right side, behind the canvas -->
+  <div id="controls-panel" style="
+    position: fixed;
+    right: 12px;
+    bottom: 44px;
+    z-index: 50;
+    text-align: right;
+    font-family: Consolas, monospace;
+    font-size: 10px;
+    color: #555;
+    line-height: 1.7;
+    pointer-events: none;
+  ">
+    <div style="color:#888;margin-bottom:2px;">KEYBOARD</div>
+    <div>Space — start / restart</div>
+    <div>← → — move</div>
+    <div>↑ — rotate CW</div>
+    <div>↓ — soft drop</div>
+    <div>Z — trip mode</div>
+    <div style="color:#888;margin-top:6px;margin-bottom:2px;">MOUSE</div>
+    <div>left click — rotate CW</div>
+    <div>right click — rotate CCW</div>
+    <div>hold — soft drop</div>
+    <div style="color:#888;margin-top:6px;margin-bottom:2px;">TOUCH</div>
+    <div>tap — rotate</div>
+    <div>tap strip ← → — move</div>
+    <div>drag ← → — move</div>
+    <div>drag ↓ / hold — soft drop</div>
+  </div>
+
+  <!-- GitHub link and last commit date — fixed bottom-right, below controls -->
+  <div style="position:fixed;bottom:24px;right:12px;z-index:50;">
     <a href="https://github.com/spotco/JavaTetrisHtml5Port" target="_blank"
        style="color:#444;font-size:10px;font-family:monospace;text-decoration:none;">
       github.com/spotco/JavaTetrisHtml5Port
     </a>
   </div>
-  <div id="build-info" style="position:fixed;bottom:8px;right:12px;color:#444;font-size:10px;font-family:monospace;z-index:100;"></div>
+  <div id="build-info" style="position:fixed;bottom:8px;right:12px;color:#444;font-size:10px;font-family:monospace;z-index:50;"></div>
   <script>
     fetch('https://api.github.com/repos/spotco/JavaTetrisHtml5Port/commits/HEAD')
       .then(r => r.json())

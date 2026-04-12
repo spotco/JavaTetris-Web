@@ -384,14 +384,16 @@ class TetrisMain extends Phaser.Scene {
     onDown()  { if (this.state === 'GAME') this.game.getPlayerInput('DOWN');  }
 
     // ─── Pointer input (mouse + touch) ────────────────────────────────────────
-    // Desktop:  left-click = rotate (left half CCW / right half CW)
-    //           right-click = CW,   hold = soft drop
-    // Mobile:   drag over field = move left/right (ratchet: one cell per 19px)
-    //           tap left strip  (x < field) = move left  (instant, on pointerdown)
-    //           tap right strip (x > field) = move right (instant, on pointerdown)
-    //           tap left half of field = rotate CCW
-    //           tap right half of field = rotate CW
-    //           hold = soft drop,  swipe down = one soft-drop step
+    // Desktop:  left-click tap = rotate CW
+    //           right-click    = rotate CCW
+    //           hold (220ms)   = soft drop, repeating every 80ms
+    // Mobile:   tap on field             = rotate CW
+    //           tap left strip  (x < field left)  = move left  (instant, on pointerdown)
+    //           tap right strip (x > field right) = move right (instant, on pointerdown)
+    //           drag left/right over field = move (ratchet: one cell per 19px)
+    //           drag down                  = soft drop (one step per 19px)
+    //           hold (220ms)               = soft drop, repeating every 80ms
+    // Both:     click/tap on title or game-over screen = start / restart
     setupPointerInput() {
         this.input.mouse.disableContextMenu();
 

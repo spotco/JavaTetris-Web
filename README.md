@@ -40,13 +40,36 @@ npx serve .
 
 ## Controls
 
+### Keyboard
+
 | Key | Action |
 |---|---|
 | `Space` | Start game / confirm game over |
 | `←` / `→` | Move piece left / right |
-| `↑` | Rotate piece |
+| `↑` | Rotate CW |
 | `↓` | Soft drop |
 | `Z` | Toggle "trip" mode (secret) |
+
+### Mouse
+
+| Input | Action |
+|---|---|
+| Left click | Rotate CW |
+| Right click | Rotate CCW |
+| Hold | Soft drop (after 220 ms, repeating) |
+| Click on title / game-over | Start / restart |
+
+### Touch
+
+| Input | Action |
+|---|---|
+| Tap on field | Rotate CW |
+| Tap left strip (outside field) | Move left |
+| Tap right strip (outside field) | Move right |
+| Drag left / right | Move (one cell per 19 px) |
+| Drag down | Soft drop (one step per 19 px) |
+| Hold | Soft drop (after 220 ms, repeating) |
+| Tap on title / game-over | Start / restart |
 
 ## Notes
 
