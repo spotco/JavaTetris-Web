@@ -1,6 +1,6 @@
 # JavaTetris — HTML5/Phaser 3 Port
 
-**Play it here: https://spotco.github.io/JavaTetrisHtml5Port/**
+**Play it here: [https://spotco.github.io/JavaTetrisHtml5Port/](https://spotco.github.io/JavaTetris-Web/)**
 
 A faithful port of [spotco/JavaTetris](https://github.com/spotco/JavaTetris) to HTML5 using [Phaser 3](https://phaser.io/).  
 The JavaScript source mirrors the original Java code as closely as possible in structure, naming, and style.
